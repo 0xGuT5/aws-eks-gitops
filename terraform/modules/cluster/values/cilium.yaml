@@ -1,0 +1,16 @@
+# chaining mode on top of the aws vpc cni, pods keep their vpc ips
+cni:
+  chainingMode: aws-cni
+  exclusive: false
+
+enableIPv4Masquerade: false
+routingMode: native
+
+endpointRoutes:
+  enabled: true
+
+hubble:
+  relay:
+    enabled: true
+  ui:
+    enabled: true
