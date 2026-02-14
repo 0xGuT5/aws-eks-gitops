@@ -1,0 +1,12 @@
+# the eks api is public on purpose, kubectl runs from my laptop
+AWS-0040
+AWS-0041
+
+# nodes need egress to pull images, the rule comes from the eks module
+AWS-0104
+
+# sse s3 is enough for a lab state bucket, a kms key is not worth it here
+AWS-0132
+
+# keycloak in dev mode writes under /opt/keycloak on start, a read only root fs breaks it
+KSV-0014
