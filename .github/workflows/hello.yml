@@ -1,0 +1,51 @@
+name: hello
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "hello/**"
+      - ".github/workflows/hello.yml"
+  pull_request:
+    paths:
+      - "hello/**"
+      - ".github/workflows/hello.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hello
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: build image
+        run: docker build -t hello:ci .
+
+      - name: scan image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: hello:ci
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+      - name: log in to ghcr
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: push image
+        if: github.event_name == 'push'
+        run: |
+          docker tag hello:ci ghcr.io/0xgut5/aws-eks-gitops/hello:main
+          docker tag hello:ci ghcr.io/0xgut5/aws-eks-gitops/hello:${{ github.sha }}
+          docker push ghcr.io/0xgut5/aws-eks-gitops/hello:main
+          docker push ghcr.io/0xgut5/aws-eks-gitops/hello:${{ github.sha }}
