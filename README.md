@@ -40,6 +40,7 @@ aws eks update-kubeconfig --name gitops-dev --region eu-west-3
 ```
 
 ## Secrets
+
 Create these once the cluster is up with the same client secret in both namespaces:
 
 ```sh
@@ -54,8 +55,6 @@ kubectl -n argocd label secret keycloak-oidc app.kubernetes.io/part-of=argocd
 Keycloak imports the `platform` realm from `gitops/apps/keycloak/base/platform-realm.json` on startup. Anyone in the `platform-admins` group is admin in Argo CD, everyone else gets read only access.
 
 Keycloak runs in dev mode with no real database, so users created by hand are gone as soon as the pod restarts. The realm itself comes back fine since it lives in git. Okay for this lab.
-
-
 
 ## CI
 
