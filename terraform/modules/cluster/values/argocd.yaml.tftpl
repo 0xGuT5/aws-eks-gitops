@@ -1,0 +1,15 @@
+global:
+  domain: argocd.${env}.${base_domain}
+
+configs:
+  params:
+    # no tls yet, traefik serves plain http
+    server.insecure: true
+
+  cm:
+    url: http://argocd.${env}.${base_domain}
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: traefik
