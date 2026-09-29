@@ -1,0 +1,52 @@
+name: terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+  pull_request:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.*"
+      - run: terraform fmt -check -recursive terraform
+
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        root: [bootstrap, envs/dev, envs/staging]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.*"
+      - working-directory: terraform/${{ matrix.root }}
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: terraform
+          trivyignores: .trivyignore
+          exit-code: 1
+          severity: CRITICAL,HIGH
