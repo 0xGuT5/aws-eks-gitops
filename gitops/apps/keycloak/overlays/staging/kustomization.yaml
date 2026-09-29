@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: keycloak
+resources:
+  - ../../base
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: keycloak
+      spec:
+        template:
+          spec:
+            containers:
+              - name: keycloak
+                env:
+                  - name: KC_HOSTNAME
+                    value: http://keycloak.staging.example.com
+                  - name: ARGOCD_URL
+                    value: http://argocd.staging.example.com
+  - target:
+      kind: Ingress
+      name: keycloak
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: keycloak.staging.example.com
