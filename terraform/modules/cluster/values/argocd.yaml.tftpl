@@ -8,6 +8,19 @@ configs:
 
   cm:
     url: http://argocd.${env}.${base_domain}
+    # login through keycloak, the client secret is read from the keycloak-oidc secret
+    oidc.config: |
+      name: Keycloak
+      issuer: http://keycloak.${env}.${base_domain}/realms/platform
+      clientID: argocd
+      clientSecret: $keycloak-oidc:clientSecret
+      requestedScopes: ["openid", "profile", "email"]
+
+  rbac:
+    policy.default: role:readonly
+    policy.csv: |
+      g, platform-admins, role:admin
+    scopes: "[groups]"
 
 server:
   ingress:
