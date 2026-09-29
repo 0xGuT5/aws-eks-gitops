@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.7.3
+          # dev mode uses a local h2 file, the realm is imported again on start
+          args:
+            - start-dev
+            - --import-realm
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: password
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_HOSTNAME
+              value: http://keycloak.example.com
+            # used inside the realm file
+            - name: ARGOCD_URL
+              value: http://argocd.example.com
+            - name: ARGOCD_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-argocd-client
+                  key: clientSecret
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+            initialDelaySeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm

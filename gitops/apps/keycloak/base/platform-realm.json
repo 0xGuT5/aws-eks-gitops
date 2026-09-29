@@ -1,0 +1,36 @@
+{
+  "realm": "platform",
+  "enabled": true,
+  "groups": [
+    { "name": "platform-admins" }
+  ],
+  "clients": [
+    {
+      "clientId": "argocd",
+      "name": "Argo CD",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${ARGOCD_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["${ARGOCD_URL}/auth/callback"],
+      "webOrigins": ["${ARGOCD_URL}"],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}
