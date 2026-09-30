@@ -2,11 +2,11 @@
 
 EKS on AWS, built with Terraform. Once the cluster is up, Argo CD takes over and manages everything inside it from this repo.
 
-There are two environments, dev and staging, each with its own VPC, EKS cluster and Argo CD. Keep staging off unless you're actually using it, EKS plus a NAT gateway adds up fast.
+There are two environments, dev and staging, each with its own VPC, EKS cluster and Argo CD.
 
 ## Layout
 
-`terraform/bootstrap`: the S3 bucket for Terraform state. Run it once and forget about it.
+`terraform/bootstrap`: the S3 bucket for Terraform state.
 
 `terraform/modules/cluster`: the VPC, the EKS cluster, and the Helm releases that need to happen before Argo CD can take over (Cilium, Argo CD itself, and a root Application).
 
@@ -18,15 +18,13 @@ There are two environments, dev and staging, each with its own VPC, EKS cluster 
 
 ## Networking
 
-Cilium runs in chaining mode on top of the AWS VPC CNI, so pods still get VPC IPs and Cilium adds network policies and Hubble on top. Replacing the VPC CNI entirely is possible but makes the first apply a lot more fragile, so chaining it is.
+Cilium runs in chaining mode on top of the AWS VPC CNI, so pods still get VPC IPs and Cilium adds network policies and Hubble on top.
 
 Both `hello` and `keycloak` ship with a default deny `NetworkPolicy`, ingress is only allowed from Traefik (and from Argo CD for Keycloak, for the OIDC token exchange), egress is only DNS.
 
-Traefik is the ingress controller and gets an NLB. Apps are exposed as `<app>.<env>.example.com`, so change `base_domain` in the env files and the overlay hosts to your own domain, then point a wildcard record at the NLB. No TLS yet, it's all plain http.
+Traefik is the ingress controller and gets an NLB. Apps are exposed as `<app>.<env>.example.com`, so change `base_domain` in the env files and the overlay hosts to your own domain, then point a wildcard record at the NLB. No TLS yet, it's plain http.
 
 ## Running it
-
-You need Terraform 1.10+, the AWS CLI with credentials, and kubectl.
 
 The bucket name in `terraform/bootstrap/variables.tf` and the `backend.tf` files has to be globally unique, pick your own before the first apply.
 
@@ -41,22 +39,8 @@ terraform apply
 aws eks update-kubeconfig --name gitops-dev --region eu-west-3
 ```
 
-Most of the apply time is just EKS building the control plane, so this is a good spot to go make coffee.
-
-While the repo is private, Argo CD needs credentials before it can sync anything:
-
-```sh
-kubectl -n argocd create secret generic repo-aws-eks-gitops \
-  --from-literal=type=git \
-  --from-literal=url=https://github.com/0xGuT5/aws-eks-gitops.git \
-  --from-literal=username=0xGuT5 \
-  --from-literal=password=<github token>
-kubectl -n argocd label secret repo-aws-eks-gitops argocd.argoproj.io/secret-type=repository
-```
-
 ## Secrets
-
-Nothing sensitive is committed. Create these once the cluster is up, with the same client secret in both namespaces:
+Create these once the cluster is up with the same client secret in both namespaces:
 
 ```sh
 kubectl create namespace keycloak
@@ -69,15 +53,13 @@ kubectl -n argocd label secret keycloak-oidc app.kubernetes.io/part-of=argocd
 
 Keycloak imports the `platform` realm from `gitops/apps/keycloak/base/platform-realm.json` on startup. Anyone in the `platform-admins` group is admin in Argo CD, everyone else gets read only access.
 
-Keycloak runs in dev mode with no real database, so users created by hand are gone as soon as the pod restarts. The realm itself comes back fine since it lives in git. Okay for a lab, not for anything you actually care about.
+Keycloak runs in dev mode with no real database, so users created by hand are gone as soon as the pod restarts. The realm itself comes back fine since it lives in git. Okay for this lab.
 
-## Image
 
-The hello Deployment pulls `ghcr.io/0xgut5/aws-eks-gitops/hello:main`. GHCR packages are private by default, so either make the package public or add an image pull secret.
 
 ## CI
 
-`terraform.yml` checks formatting, validates every root module, and runs a Trivy config scan. Anything ignored on purpose is listed with a reason in `.trivyignore`.
+`terraform.yml` checks formatting, validates every root module, and runs a Trivy config scan.
 
 `hello.yml` runs the Go tests, builds the image, scans it with Trivy, and pushes it to GHCR when something lands on main.
 
